@@ -1,5 +1,4 @@
 import argparse
-import csv
 import json
 import logging
 import os
@@ -17,8 +16,6 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
-from fake_news.utils.features import normalize_and_clean
-
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
     level=logging.DEBUG
@@ -34,25 +31,7 @@ def read_args() -> argparse.Namespace:
 
 def read_datapoints(datapath: str) -> List[Dict]:
     with open(datapath) as f:
-        reader = csv.DictReader(f, delimiter="\t", fieldnames=[
-            "id",
-            "statement_json",
-            "label",
-            "statement",
-            "subject",
-            "speaker",
-            "speaker_title",
-            "state_info",
-            "party_affiliation",
-            "barely_true_count",
-            "false_count",
-            "half_true_count",
-            "mostly_true_count",
-            "pants_fire_count",
-            "context",
-            "justification"
-        ])
-        return [row for row in reader]
+        return json.load(f)
 
 
 def extract_manual_features(datapoints: List[Dict]) -> List[Dict]:
@@ -99,10 +78,6 @@ if __name__ == "__main__":
         train_datapoints = read_datapoints(config["train_data_path"])
         val_datapoints = read_datapoints(config["val_data_path"])
         test_datapoints = read_datapoints(config["test_data_path"])
-        
-        train_datapoints = normalize_and_clean(train_datapoints)
-        val_datapoints = normalize_and_clean(val_datapoints)
-        test_datapoints = normalize_and_clean(test_datapoints)
         
         # Featurize
         dict_featurizer = DictVectorizer()
@@ -152,7 +127,7 @@ if __name__ == "__main__":
         model = RandomForestClassifier()
         LOGGER.info("Training model...")
         model.fit(train_features, train_labels)
-    
+        
         # Cache model weights on disk
         os.makedirs(config["model_output_path"], exist_ok=True)
         with open(os.path.join(config["model_output_path"], "model.pkl"), "wb") as f:
