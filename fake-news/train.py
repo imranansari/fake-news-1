@@ -1,10 +1,12 @@
 import argparse
 import csv
+import json
 import logging
+import random
 from typing import Dict
 from typing import List
 
-from sklearn.base import TransformerMixin
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -14,7 +16,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 logging.basicConfig(
-    format="%(levelname)s - %(asctime)s - %(filename)s - lineno: %(lineno)d - %(message)s",
+    format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
     level=logging.DEBUG
 )
 LOGGER = logging.getLogger(__name__)
@@ -22,9 +24,7 @@ LOGGER = logging.getLogger(__name__)
 
 def read_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train-data-path", type=str)
-    parser.add_argument("--val-data-path", type=str)
-    parser.add_argument("--test-data-path", type=str)
+    parser.add_argument("--config-file", type=str)
     return parser.parse_args()
 
 
@@ -68,32 +68,34 @@ def extract_statements(datapoints: List[Dict]) -> List[str]:
     return [datapoint["statement"] for datapoint in datapoints]
 
 
-class StatementExtractor(TransformerMixin):
-    def transform(self, datapoints):
-        return [datapoint["statement"] for datapoint in datapoints]
-    
-    def get_feature_names(self):
-        return ["statement"]
+def set_seed() -> None:
+    random.seed(42)
+    np.random.seed(42)
+    # TODO (mihail): Add torch random seeds when we get to those models
 
 
 if __name__ == "__main__":
     args = read_args()
-    
+    with open(args.config_file) as f:
+        config = json.load(f)
     # Read data
-    train_datapoints = read_datapoints(args.train_data_path)
-    val_datapoints = read_datapoints(args.val_data_path)
-    test_datapoints = read_datapoints(args.test_data_path)
+    train_datapoints = read_datapoints(config["train_data_path"])
+    val_datapoints = read_datapoints(config["val_data_path"])
+    test_datapoints = read_datapoints(config["test_data_path"])
     
     train_labels = [datapoint["label"] for datapoint in train_datapoints]
     val_labels = [datapoint["label"] for datapoint in val_datapoints]
     test_labels = [datapoint["label"] for datapoint in test_datapoints]
+
+
+    # TODO (mihail): Clean up/normalize data first
+    # TODO (mihail): Dump normalized features/labels to file
     
     dict_featurizer = DictVectorizer()
     tfidf_featurizer = TfidfVectorizer()
     
     model = RandomForestClassifier()
     
-    # TODO (mihail): Clean up/normalize data first
     # Featurize
     statement_transformer = FunctionTransformer(extract_statements)
     manual_feature_transformer = FunctionTransformer(extract_manual_features)

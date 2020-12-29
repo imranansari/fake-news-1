@@ -1,0 +1,93 @@
+from copy import deepcopy
+from typing import Dict
+from typing import List
+
+# Mapping from speaker title variants seen in data to their canonical form
+CANONICAL_SPEAKER_TITLES = {
+    "u.s. house of representative": "u.s. house of representatives",
+    "u.s. representativej": "u.s. representative",
+    "talks show host": "talk show host",
+    "u. s. congressman": "u.s. congressman",
+    "politican action committee": "political action committee",
+    "retired": "retiree",
+    "restauranteur": "restaurateur"
+}
+
+SIX_WAY_LABEL_TO_BINARY = {
+    "pants-fire": False,
+    "barely-true": False,
+    "false": False,
+    "true": True,
+    "half-true": True,
+    "mostly-true": True
+}
+
+CANONICAL_STATE = {
+    "Tennessee": "Tennessee",
+    "Tennesse": "Tennessee",
+    "District of Columbia": "Washington D.C.",
+    "Washington DC": "Washington D.C.",
+    "Washington, D.C.": "Washington D.C.",
+    "Washington D.C.": "Washington D.C.",
+    "Tex": "Texas",
+    "Texas": "Texas",
+    "Washington state": "Washington",
+    "Washington": "Washington",
+    "Virgina": "Virginia",
+    "Virgiia": "Virginia",
+    "Virginia": "Virginia",
+    "Pennsylvania": "Pennsylvania",
+    "PA - Pennsylvania": "Pennsylvania",
+    "Rhode Island": "Rhode Island",
+    "Rhode island": "Rhode Island",
+    "Ohio": "Ohio",
+    "ohio": "Ohio"}
+
+PARTY_AFFILIATIONS = {"republican", "democrat", "none", "organization", "independent",
+                      "columnist", "activist", "talk-show-host", "libertarian",
+                      "newsmaker", "journalist", "labor-leader", "state-official",
+                      "business-leader", "education-official", "tea-party-member",
+                      "green", "liberal-party-canada", "government-body", "Moderate",
+                      "democratic-farmer-labor", "ocean-state-tea-party-action",
+                      "constitution-party"}
+
+
+def normalize_labels(labels: List[str]) -> List[bool]:
+    return [SIX_WAY_LABEL_TO_BINARY[label.lower().strip()] for label in labels]
+
+
+def normalize_speaker_title(datapoints: List[Dict]) -> List[Dict]:
+    normalized_datapoints = []
+    for datapoint in datapoints:
+        # First do simple cleaning
+        normalized_datapoint = deepcopy(datapoint)
+        old_speaker_title = normalized_datapoint["speaker_title"]
+        old_speaker_title = old_speaker_title.lower().strip().replace("-", " ")
+        # Then canonicalize
+        if old_speaker_title in CANONICAL_SPEAKER_TITLES:
+            old_speaker_title = CANONICAL_SPEAKER_TITLES[old_speaker_title]
+        normalized_datapoint["speaker_title"] = old_speaker_title
+    
+    return normalized_datapoints
+
+
+def normalize_party_affiliations(datapoints: List[Dict]) -> List[Dict]:
+    normalized_datapoints = []
+    for datapoint in datapoints:
+        normalized_datapoint = deepcopy(datapoint)
+        if normalized_datapoint["party_affiliation"] not in PARTY_AFFILIATIONS:
+            normalized_datapoint["party_affiliation"] = "none"
+    return normalized_datapoints
+
+
+def normalize_state_info_title(datapoints: List[Dict]) -> List[Dict]:
+    normalized_datapoints = []
+    for datapoint in datapoints:
+        normalized_datapoint = deepcopy(datapoint)
+        old_state_info = normalized_datapoint["state_info"]
+        old_state_info = old_state_info.lower().strip().replace("-", " ")
+        if old_state_info in CANONICAL_STATE:
+            old_state_info = CANONICAL_STATE[old_state_info]
+        normalized_datapoint["state_info"] = old_state_info
+    
+    return normalized_datapoints
