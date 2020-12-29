@@ -1,0 +1,11 @@
+{
+  "model": "random_forest",
+  "train_data_path": "../data/raw/train2.tsv",
+  "val_data_path": "../data/raw/val2.tsv",
+  "test_data_path": "../data/raw/test2.tsv",
+  "train_cached_features_path": "../data/processed/train_features.pkl",
+  "val_cached_features_path": "../data/processed/val_features.pkl",
+  "test_cached_features_path": "../data/processed/test_features.pkl",
+  "model_output_path": "../model_checkpoints/random_forest",
+  "evaluate": false
+}

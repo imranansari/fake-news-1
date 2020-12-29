@@ -41,22 +41,32 @@ CANONICAL_STATE = {
     "Rhode Island": "Rhode Island",
     "Rhode island": "Rhode Island",
     "Ohio": "Ohio",
-    "ohio": "Ohio"}
+    "ohio": "Ohio"
+}
 
-PARTY_AFFILIATIONS = {"republican", "democrat", "none", "organization", "independent",
-                      "columnist", "activist", "talk-show-host", "libertarian",
-                      "newsmaker", "journalist", "labor-leader", "state-official",
-                      "business-leader", "education-official", "tea-party-member",
-                      "green", "liberal-party-canada", "government-body", "Moderate",
-                      "democratic-farmer-labor", "ocean-state-tea-party-action",
-                      "constitution-party"}
+PARTY_AFFILIATIONS = {
+    "republican", "democrat", "none", "organization", "independent",
+    "columnist", "activist", "talk-show-host", "libertarian",
+    "newsmaker", "journalist", "labor-leader", "state-official",
+    "business-leader", "education-official", "tea-party-member",
+    "green", "liberal-party-canada", "government-body", "Moderate",
+    "democratic-farmer-labor", "ocean-state-tea-party-action",
+    "constitution-party"
+}
 
 
-def normalize_labels(labels: List[str]) -> List[bool]:
-    return [SIX_WAY_LABEL_TO_BINARY[label.lower().strip()] for label in labels]
+# NOTE: Making sure that all normalization operations preserve immutability of inputs
+def normalize_labels(datapoints: List[Dict]) -> List[Dict]:
+    normalized_datapoints = []
+    for datapoint in datapoints:
+        # First do simple cleaning
+        normalized_datapoint = deepcopy(datapoint)
+        normalized_datapoint["label"] = SIX_WAY_LABEL_TO_BINARY[datapoint["label".lower().strip()]]
+        normalized_datapoints.append(normalized_datapoint)
+    return normalized_datapoints
 
 
-def normalize_speaker_title(datapoints: List[Dict]) -> List[Dict]:
+def normalize_and_clean_speaker_title(datapoints: List[Dict]) -> List[Dict]:
     normalized_datapoints = []
     for datapoint in datapoints:
         # First do simple cleaning
@@ -67,20 +77,21 @@ def normalize_speaker_title(datapoints: List[Dict]) -> List[Dict]:
         if old_speaker_title in CANONICAL_SPEAKER_TITLES:
             old_speaker_title = CANONICAL_SPEAKER_TITLES[old_speaker_title]
         normalized_datapoint["speaker_title"] = old_speaker_title
-    
+        normalized_datapoints.append(normalized_datapoint)
     return normalized_datapoints
 
 
-def normalize_party_affiliations(datapoints: List[Dict]) -> List[Dict]:
+def normalize_and_clean_party_affiliations(datapoints: List[Dict]) -> List[Dict]:
     normalized_datapoints = []
     for datapoint in datapoints:
         normalized_datapoint = deepcopy(datapoint)
         if normalized_datapoint["party_affiliation"] not in PARTY_AFFILIATIONS:
             normalized_datapoint["party_affiliation"] = "none"
+        normalized_datapoints.append(normalized_datapoint)
     return normalized_datapoints
 
 
-def normalize_state_info_title(datapoints: List[Dict]) -> List[Dict]:
+def normalize_and_clean_state_info(datapoints: List[Dict]) -> List[Dict]:
     normalized_datapoints = []
     for datapoint in datapoints:
         normalized_datapoint = deepcopy(datapoint)
@@ -89,5 +100,17 @@ def normalize_state_info_title(datapoints: List[Dict]) -> List[Dict]:
         if old_state_info in CANONICAL_STATE:
             old_state_info = CANONICAL_STATE[old_state_info]
         normalized_datapoint["state_info"] = old_state_info
-    
+        normalized_datapoints.append(normalized_datapoint)
     return normalized_datapoints
+
+
+def normalize_and_clean(datapoints: List[Dict]) -> List[Dict]:
+    return normalize_and_clean_speaker_title(
+        normalize_and_clean_party_affiliations(
+            normalize_and_clean_state_info(
+                normalize_labels(
+                    datapoints
+                )
+            )
+        )
+    )
