@@ -104,12 +104,28 @@ def normalize_and_clean_state_info(datapoints: List[Dict]) -> List[Dict]:
     return normalized_datapoints
 
 
+def normalize_and_clean_counts(datapoints: List[Dict]) -> List[Dict]:
+    normalized_datapoints = []
+    for idx, datapoint in enumerate(datapoints):
+        normalized_datapoint = deepcopy(datapoint)
+        for count_col in ["barely_true_count",
+                          "false_count",
+                          "half_true_count",
+                          "mostly_true_count",
+                          "pants_fire_count"]:
+            normalized_datapoint[count_col] = float(normalized_datapoint[count_col])
+            normalized_datapoints.append(normalized_datapoint)
+    return normalized_datapoints
+
+
 def normalize_and_clean(datapoints: List[Dict]) -> List[Dict]:
     return normalize_and_clean_speaker_title(
         normalize_and_clean_party_affiliations(
             normalize_and_clean_state_info(
-                normalize_labels(
-                    datapoints
+                normalize_and_clean_counts(
+                    normalize_labels(
+                        datapoints
+                    )
                 )
             )
         )
