@@ -6,6 +6,7 @@
   "train_cached_features_path": "../data/processed/train_features.pkl",
   "val_cached_features_path": "../data/processed/val_features.pkl",
   "test_cached_features_path": "../data/processed/test_features.pkl",
+  "credit_bins_path": "../data/processed/optimal_credit_bins.json",
   "model_output_path": "../model_checkpoints/random_forest",
   "evaluate": false,
   "params": {

@@ -4,6 +4,7 @@ import logging
 import os
 import pickle
 import random
+from functools import partial
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -21,6 +22,14 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
+from fake_news.utils.features import BARELY_TRUE_CREDIT_BINS
+from fake_news.utils.features import FALSE_CREDIT_BINS
+from fake_news.utils.features import HALF_TRUE_BINS
+from fake_news.utils.features import MOSTLY_TRUE_BINS
+from fake_news.utils.features import PANTS_FIRE_BINS
+from fake_news.utils.features import compute_bin_idx
+from fake_news.utils.reader import read_json_data
+
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
     level=logging.DEBUG
@@ -34,16 +43,27 @@ def read_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def read_datapoints(datapath: str) -> List[Dict]:
-    with open(datapath) as f:
-        return json.load(f)
-
-
-def extract_manual_features(datapoints: List[Dict]) -> List[Dict]:
+def extract_manual_features(datapoints: List[Dict], optimal_credit_bins_path: str) -> List[Dict]:
     all_features = []
+    with open(optimal_credit_bins_path) as f:
+        optimal_credit_bins = json.load(f)
     for datapoint in datapoints:
         features = {}
+        features["speaker"] = datapoint["speaker"]
         features["speaker_title"] = datapoint["speaker_title"]
+        features["state_info"] = datapoint["state_info"]
+        features["party_affiliation"] = datapoint["party_affiliation"]
+        # Compute credit score features
+        features["barely_true_credit"] = str(compute_bin_idx(datapoint["barely_true_count"],
+                                                             optimal_credit_bins["barely_true_count"]))
+        features["false_credit"] = str(compute_bin_idx(datapoint["false_count"],
+                                                       optimal_credit_bins["false_count"]))
+        features["half_true_credit"] = str(compute_bin_idx(datapoint["half_true_count"],
+                                                           optimal_credit_bins["half_true_count"]))
+        features["mostly_true_credit"] = str(compute_bin_idx(datapoint["mostly_true_count"],
+                                                             optimal_credit_bins["mostly_true_count"]))
+        features["pants_fire_credit"] = str(compute_bin_idx(datapoint["pants_fire_count"],
+                                                            optimal_credit_bins["pants_fire_count"]))
         all_features.append(features)
     return all_features
 
@@ -92,7 +112,7 @@ if __name__ == "__main__":
     set_random_seed()
     mlflow.set_experiment(config["model"])
     
-    if os.path.exists(config["train_cached_features_path"]) and \
+    if config["evaluate"] and os.path.exists(config["train_cached_features_path"]) and \
         os.path.exists(config["val_cached_features_path"]) and \
         os.path.exists(config["test_cached_features_path"]):
         LOGGER.info("Loading up cached features from disk...")
@@ -105,30 +125,31 @@ if __name__ == "__main__":
     else:
         LOGGER.info("Featurizing data from scratch...")
         # Read data
-        train_datapoints = read_datapoints(config["train_data_path"])
-        val_datapoints = read_datapoints(config["val_data_path"])
-        test_datapoints = read_datapoints(config["test_data_path"])
+        train_datapoints = read_json_data(config["train_data_path"])
+        val_datapoints = read_json_data(config["val_data_path"])
+        test_datapoints = read_json_data(config["test_data_path"])
         
         # Featurize
         dict_featurizer = DictVectorizer()
         tfidf_featurizer = TfidfVectorizer()
         
         statement_transformer = FunctionTransformer(extract_statements)
-        manual_feature_transformer = FunctionTransformer(extract_manual_features)
+        manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
+                                                                 optimal_credit_bins_path=config["credit_bins_path"]))
         
         manual_feature_pipeline = Pipeline([
             ("manual_features", manual_feature_transformer),
             ("manual_featurizer", dict_featurizer)
         ])
         
-        tfidf_feature_pipeline = Pipeline([
+        ngram_feature_pipeline = Pipeline([
             ("statements", statement_transformer),
-            ("tfidf_featurizer", tfidf_featurizer)
+            ("ngram_featurizer", tfidf_featurizer)
         ])
         
         combined_featurizer = FeatureUnion([
             ("manual_feature_pipe", manual_feature_pipeline),
-            ("tfidf_featurizer", tfidf_feature_pipeline)
+            ("ngram_featurizer", ngram_feature_pipeline)
         ])
         
         train_features = combined_featurizer.fit_transform(train_datapoints)
@@ -170,6 +191,6 @@ if __name__ == "__main__":
                 pickle.dump(model, f)
         mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")
-        metrics = compute_metrics(model, test_features, test_labels, split="test")
+        metrics = compute_metrics(model, val_features, val_labels, split="val")
         LOGGER.info(f"Test metrics: {metrics}")
         mlflow.log_metrics(metrics)
