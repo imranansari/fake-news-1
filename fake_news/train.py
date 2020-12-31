@@ -22,6 +22,7 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
+from fake_news.model.tree_based import RandomForestModel
 from fake_news.utils.features import compute_bin_idx
 from fake_news.utils.reader import read_json_data
 
@@ -75,13 +76,12 @@ def set_random_seed() -> None:
 
 # TODO (mihail): Define types for datapoint
 
-def compute_metrics(model: RandomForestClassifier,
+def compute_metrics(model: RandomForestModel,
                     input: np.array,
                     expected_labels: List[bool],
                     split: Optional[str] = None) -> Dict:
-    # TODO (mihail): Consolidate this
-    predicted_labels = model.predict(input)
-    predicted_proba = model.predict_proba(input)
+    predicted_proba = model.predict(input)
+    predicted_labels = np.argmax(predicted_proba, axis=1)
     accuracy = accuracy_score(expected_labels, predicted_labels)
     f1 = f1_score(expected_labels, predicted_labels)
     auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
@@ -176,9 +176,9 @@ if __name__ == "__main__":
             with open(os.path.join(config["model_output_path"], "model.pkl"), "rb") as f:
                 model = pickle.load(f)
         else:
-            model = RandomForestClassifier()
             LOGGER.info("Training model...")
-            model.fit(train_features, train_labels)
+            model = RandomForestModel()
+            model.train(train_features, train_labels)
             
             # Cache model weights on disk
             os.makedirs(config["model_output_path"], exist_ok=True)
