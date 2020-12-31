@@ -22,11 +22,6 @@ from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
-from fake_news.utils.features import BARELY_TRUE_CREDIT_BINS
-from fake_news.utils.features import FALSE_CREDIT_BINS
-from fake_news.utils.features import HALF_TRUE_BINS
-from fake_news.utils.features import MOSTLY_TRUE_BINS
-from fake_news.utils.features import PANTS_FIRE_BINS
 from fake_news.utils.features import compute_bin_idx
 from fake_news.utils.reader import read_json_data
 

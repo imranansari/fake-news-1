@@ -23,25 +23,24 @@ SIX_WAY_LABEL_TO_BINARY = {
 }
 
 CANONICAL_STATE = {
-    "Tennessee": "Tennessee",
-    "Tennesse": "Tennessee",
-    "District of Columbia": "Washington D.C.",
-    "Washington DC": "Washington D.C.",
-    "Washington, D.C.": "Washington D.C.",
-    "Washington D.C.": "Washington D.C.",
-    "Tex": "Texas",
-    "Texas": "Texas",
-    "Washington state": "Washington",
-    "Washington": "Washington",
-    "Virgina": "Virginia",
-    "Virgiia": "Virginia",
-    "Virginia": "Virginia",
-    "Pennsylvania": "Pennsylvania",
-    "PA - Pennsylvania": "Pennsylvania",
-    "Rhode Island": "Rhode Island",
-    "Rhode island": "Rhode Island",
-    "Ohio": "Ohio",
-    "ohio": "Ohio"
+    "tennesse": "tennessee",
+    "district of columbia": "washington d.c.",
+    "washington dc": "washington d.c.",
+    "washington, d.c.": "washington d.c.",
+    "washington d.c.": "washington d.c.",
+    "tex": "texas",
+    "texas": "texas",
+    "washington state": "washington",
+    "washington": "washington",
+    "virgina": "virginia",
+    "virgiia": "virginia",
+    "virginia": "virginia",
+    "pennsylvania": "pennsylvania",
+    "pa - pennsylvania": "pennsylvania",
+    "rhode island": "rhode island",
+    "rhode island": "rhode island",
+    "ohio": "ohio",
+    "ohio": "ohio"
 }
 
 PARTY_AFFILIATIONS = {
@@ -53,40 +52,6 @@ PARTY_AFFILIATIONS = {
     "democratic-farmer-labor", "ocean-state-tea-party-action",
     "constitution-party"
 }
-
-BARELY_TRUE_CREDIT_BINS = [0., 3.33333333, 6.66666667, 10., 13.33333333,
-                           16.66666667, 20., 23.33333333, 26.66666667, 30.,
-                           33.33333333, 36.66666667, 40., 43.33333333, 46.66666667,
-                           50., 53.33333333, 56.66666667, 60., 63.33333333,
-                           66.66666667, 70.]
-
-FALSE_CREDIT_BINS = [0., 5.18181818, 10.36363636, 15.54545455,
-                     20.72727273, 25.90909091, 31.09090909, 36.27272727,
-                     41.45454545, 46.63636364, 51.81818182, 57.,
-                     62.18181818, 67.36363636, 72.54545455, 77.72727273,
-                     82.90909091, 88.09090909, 93.27272727, 98.45454545,
-                     103.63636364, 108.81818182, 114.]
-
-HALF_TRUE_BINS = [0., 7.27272727, 14.54545455, 21.81818182,
-                  29.09090909, 36.36363636, 43.63636364, 50.90909091,
-                  58.18181818, 65.45454545, 72.72727273, 80.,
-                  87.27272727, 94.54545455, 101.81818182, 109.09090909,
-                  116.36363636, 123.63636364, 130.90909091, 138.18181818,
-                  145.45454545, 152.72727273, 160.]
-
-MOSTLY_TRUE_BINS = [0., 7.40909091, 14.81818182, 22.22727273,
-                    29.63636364, 37.04545455, 44.45454545, 51.86363636,
-                    59.27272727, 66.68181818, 74.09090909, 81.5,
-                    88.90909091, 96.31818182, 103.72727273, 111.13636364,
-                    118.54545455, 125.95454545, 133.36363636, 140.77272727,
-                    148.18181818, 155.59090909, 163.]
-
-PANTS_FIRE_BINS = [0., 4.77272727, 9.54545455, 14.31818182,
-                   19.09090909, 23.86363636, 28.63636364, 33.40909091,
-                   38.18181818, 42.95454545, 47.72727273, 52.5,
-                   57.27272727, 62.04545455, 66.81818182, 71.59090909,
-                   76.36363636, 81.13636364, 85.90909091, 90.68181818,
-                   95.45454545, 100.22727273, 105.]
 
 
 def compute_bin_idx(val: float, bins: List[float]) -> int:
@@ -153,7 +118,8 @@ def normalize_and_clean_counts(datapoints: List[Dict]) -> List[Dict]:
                           "half_true_count",
                           "mostly_true_count",
                           "pants_fire_count"]:
-            normalized_datapoint[count_col] = float(normalized_datapoint[count_col])
+            if count_col in normalized_datapoint:
+                normalized_datapoint[count_col] = float(normalized_datapoint[count_col])
         normalized_datapoints.append(normalized_datapoint)
     return normalized_datapoints
 
