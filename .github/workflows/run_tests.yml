@@ -13,7 +13,5 @@ jobs:
         run: pip install -r requirements.txt
       - name: Set env variables
         run: echo "PYTHONPATH=$PYTHONPATH:`pwd`" >> $GITHUB_ENV
-      - name: Show env variables
-        run: echo $PYTHONPATH
       - name: Run unit tests
         run: pytest tests/
