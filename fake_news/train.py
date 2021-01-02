@@ -50,16 +50,8 @@ def extract_manual_features(datapoints: List[Dict], optimal_credit_bins_path: st
         features["state_info"] = datapoint["state_info"]
         features["party_affiliation"] = datapoint["party_affiliation"]
         # Compute credit score features
-        features["barely_true_credit"] = str(compute_bin_idx(datapoint["barely_true_count"],
-                                                             optimal_credit_bins["barely_true_count"]))
-        features["false_credit"] = str(compute_bin_idx(datapoint["false_count"],
-                                                       optimal_credit_bins["false_count"]))
-        features["half_true_credit"] = str(compute_bin_idx(datapoint["half_true_count"],
-                                                           optimal_credit_bins["half_true_count"]))
-        features["mostly_true_credit"] = str(compute_bin_idx(datapoint["mostly_true_count"],
-                                                             optimal_credit_bins["mostly_true_count"]))
-        features["pants_fire_credit"] = str(compute_bin_idx(datapoint["pants_fire_count"],
-                                                            optimal_credit_bins["pants_fire_count"]))
+        for feat in ["barely_true_count", "false_count", "half_true_count", "mostly_true_count", "pants_fire_count"]:
+            features[feat] = str(compute_bin_idx(datapoint[feat], optimal_credit_bins[feat]))
         all_features.append(features)
     return all_features
 
@@ -73,6 +65,13 @@ def set_random_seed() -> None:
     np.random.seed(42)
     # TODO (mihail): Add torch random seeds when we get to those models
 
+
+def get_all_feature_names(feature_transform: FeatureUnion) -> List[str]:
+    all_feature_names = []
+    for name, pipeline in feature_transform.transformer_list:
+        final_pipe_name, final_pipe_transformer = pipeline.steps[-1]
+        all_feature_names.extend(final_pipe_transformer.get_feature_names())
+    return all_feature_names
 
 # TODO (mihail): Define types for datapoint
 
@@ -162,6 +161,10 @@ if __name__ == "__main__":
             pickle.dump([val_features, val_labels], f)
         with open(config["test_cached_features_path"], "wb") as f:
             pickle.dump([test_features, test_labels], f)
+            
+        feature_names = get_all_feature_names(combined_featurizer)
+        with open(os.path.join(config["model_output_path"], "feature_names.pkl"), "wb") as f:
+            pickle.dump(feature_names, f)
     
     with mlflow.start_run() as run:
         with open(os.path.join(config["model_output_path"], "meta.json"), "w") as f:
