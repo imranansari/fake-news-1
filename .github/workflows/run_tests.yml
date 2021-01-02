@@ -11,5 +11,7 @@ jobs:
           python-version: 3.8
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Set env variables
+        run: export PYTHONPATH=$PYTHONPATH:`pwd`
       - name: Run unit tests
         run: pytest tests/
