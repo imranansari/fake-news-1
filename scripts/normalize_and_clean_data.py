@@ -10,10 +10,10 @@ from fake_news.utils.features import normalize_and_clean
 
 def read_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_data_path", type=str)
-    parser.add_argument("--val_data_path", type=str)
-    parser.add_argument("--test_data_path", type=str)
-    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--train-data-path", type=str)
+    parser.add_argument("--val-data-path", type=str)
+    parser.add_argument("--test-data-path", type=str)
+    parser.add_argument("--output-dir", type=str)
     return parser.parse_args()
 
 

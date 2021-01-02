@@ -1,6 +1,5 @@
 import argparse
 import json
-import os
 
 import numpy as np
 import pandas as pd
@@ -8,8 +7,8 @@ import pandas as pd
 
 def read_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train_data_path", type=str)
-    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--train-data-path", type=str)
+    parser.add_argument("--output-path", type=str)
     return parser.parse_args()
 
 
@@ -24,6 +23,6 @@ if __name__ == "__main__":
                         "pants_fire_count"]:
         optimal_credit_bins[credit_name] = list(np.histogram_bin_edges(train_df[credit_name],
                                                                        bins=10))
-    with open(os.path.join(args.output_dir, "optimal_credit_bins.json"), "w") as f:
+    with open(args.output_path, "w") as f:
         print(optimal_credit_bins)
         json.dump(optimal_credit_bins, f)

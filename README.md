@@ -15,6 +15,7 @@
   - Setup github action for running tests
   - Incorporate more features from jupyter notebook
   - Error analysis/model interpretation with SHAP etc.
+    - http://blog.datadive.net/interpreting-random-forests/
   - BERT/Roberta Baseline
   - Deployment
 
