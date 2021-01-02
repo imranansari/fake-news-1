@@ -1,3 +1,14 @@
-pytest
-dvc
-
+dvc==1.11.9
+editdistance==0.5.3
+gensim==3.8.3
+great-expectations==0.13.4
+matplotlib==3.3.2
+mlflow==1.13
+nrclex==2.0.2
+pip-chill==1.0.0
+plotly==4.11.0
+pydantic==1.7.3
+pytest==6.0.2
+shap==0.37.0
+sklearn==0.0
+vadersentiment==3.3.2
