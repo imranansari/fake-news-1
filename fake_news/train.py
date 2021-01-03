@@ -11,7 +11,6 @@ from typing import Optional
 
 import mlflow
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score
@@ -73,6 +72,7 @@ def get_all_feature_names(feature_transform: FeatureUnion) -> List[str]:
         all_feature_names.extend(final_pipe_transformer.get_feature_names())
     return all_feature_names
 
+
 # TODO (mihail): Define types for datapoint
 
 def compute_metrics(model: RandomForestModel,
@@ -106,22 +106,31 @@ if __name__ == "__main__":
     set_random_seed()
     mlflow.set_experiment(config["model"])
     
-    if config["evaluate"] and os.path.exists(config["train_cached_features_path"]) and \
-        os.path.exists(config["val_cached_features_path"]) and \
-        os.path.exists(config["test_cached_features_path"]):
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    train_cached_feature_path = os.path.join(base_dir, config["train_cached_features_path"])
+    val_cached_feature_path = os.path.join(base_dir, config["val_cached_features_path"])
+    test_cached_feature_path = os.path.join(base_dir, config["test_cached_features_path"])
+    model_output_path = os.path.join(base_dir, config["model_output_path"])
+    os.makedirs(model_output_path, exist_ok=True)
+    if config["evaluate"] and os.path.exists(train_cached_feature_path) and \
+        os.path.exists(val_cached_feature_path) and \
+        os.path.exists(test_cached_feature_path):
         LOGGER.info("Loading up cached features from disk...")
-        with open(config["train_cached_features_path"], "rb") as f:
+        with open(train_cached_feature_path, "rb") as f:
             train_features, train_labels = pickle.load(f)
-        with open(config["val_cached_features_path"], "rb") as f:
+        with open(val_cached_feature_path, "rb") as f:
             val_features, val_labels = pickle.load(f)
-        with open(config["test_cached_features_path"], "rb") as f:
+        with open(test_cached_feature_path, "rb") as f:
             test_features, test_labels = pickle.load(f)
     else:
         LOGGER.info("Featurizing data from scratch...")
+        train_data_path = os.path.join(base_dir, config["train_data_path"])
+        val_data_path = os.path.join(base_dir, config["val_data_path"])
+        test_data_path = os.path.join(base_dir, config["test_data_path"])
         # Read data
-        train_datapoints = read_json_data(config["train_data_path"])
-        val_datapoints = read_json_data(config["val_data_path"])
-        test_datapoints = read_json_data(config["test_data_path"])
+        train_datapoints = read_json_data(train_data_path)
+        val_datapoints = read_json_data(val_data_path)
+        test_datapoints = read_json_data(test_data_path)
         
         # Featurize
         dict_featurizer = DictVectorizer()
@@ -129,7 +138,9 @@ if __name__ == "__main__":
         
         statement_transformer = FunctionTransformer(extract_statements)
         manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
-                                                                 optimal_credit_bins_path=config["credit_bins_path"]))
+                                                                 optimal_credit_bins_path=
+                                                                 os.path.join(base_dir,
+                                                                              config["credit_bins_path"])))
         
         manual_feature_pipeline = Pipeline([
             ("manual_features", manual_feature_transformer),
@@ -155,28 +166,28 @@ if __name__ == "__main__":
         test_labels = [datapoint["label"] for datapoint in test_datapoints]
         
         # Dump to cache
-        with open(config["train_cached_features_path"], "wb") as f:
+        with open(train_cached_feature_path, "wb") as f:
             pickle.dump([train_features, train_labels], f)
-        with open(config["val_cached_features_path"], "wb") as f:
+        with open(val_cached_feature_path, "wb") as f:
             pickle.dump([val_features, val_labels], f)
-        with open(config["test_cached_features_path"], "wb") as f:
+        with open(test_cached_feature_path, "wb") as f:
             pickle.dump([test_features, test_labels], f)
-            
+        
         feature_names = get_all_feature_names(combined_featurizer)
-        with open(os.path.join(config["model_output_path"], "feature_names.pkl"), "wb") as f:
+        with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
             pickle.dump(feature_names, f)
     
     with mlflow.start_run() as run:
-        with open(os.path.join(config["model_output_path"], "meta.json"), "w") as f:
+        with open(os.path.join(model_output_path, "meta.json"), "w") as f:
             json.dump({"mlflow_run_id": run.info.run_id}, f)
         mlflow.set_tags({
             "evaluate": config["evaluate"]
         })
         if config["evaluate"]:
             LOGGER.info("Loading up previously saved model...")
-            if not os.path.exists(config["model_output_path"]):
+            if not os.path.exists(os.path.join(model_output_path)):
                 raise ValueError("Model output path does not exist but in `evaluate` mode!")
-            with open(os.path.join(config["model_output_path"], "model.pkl"), "rb") as f:
+            with open(os.path.join(model_output_path, "model.pkl"), "rb") as f:
                 model = pickle.load(f)
         else:
             LOGGER.info("Training model...")
@@ -184,8 +195,7 @@ if __name__ == "__main__":
             model.train(train_features, train_labels)
             
             # Cache model weights on disk
-            os.makedirs(config["model_output_path"], exist_ok=True)
-            with open(os.path.join(config["model_output_path"], "model.pkl"), "wb") as f:
+            with open(os.path.join(model_output_path, "model.pkl"), "wb") as f:
                 pickle.dump(model, f)
         mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")

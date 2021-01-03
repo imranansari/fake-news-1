@@ -2,3 +2,6 @@
 /cleaned_train_data.json
 /cleaned_val_data.json
 /cleaned_test_data.json
+/train_features.pkl
+/val_features.pkl
+/test_features.pkl

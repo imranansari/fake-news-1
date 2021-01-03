@@ -3,7 +3,8 @@ compute-credit-bins:
     --output-path data/processed/optimal_credit_bins.json
   deps:
   - path: data/processed/cleaned_train_data.json
-    md5: aca60377e24895ae77bbdb326951c739
+    md5: c6b22922ea499ac5ca97c57602694c45
+    size: 9812841
   outs:
   - path: data/processed/optimal_credit_bins.json
     md5: b9c23dc2b9b202e57e0beb8743b06e1c
@@ -34,3 +35,38 @@ normalize-and-clean-data:
   - path: data/processed/cleaned_val_data.json
     md5: 13fdb7e089cd6268ff91ede65dd226f0
     size: 1232040
+train-random-forest:
+  cmd: python fake_news/train.py --config-file config/random_forest.json
+  deps:
+  - path: config/random_forest.json
+    md5: 8e64c298aaa56a10254aa8b4243acbee
+    size: 579
+  - path: data/processed/cleaned_test_data.json
+    md5: aab533912d8d90b3b0db2c0aae63d370
+    size: 1237984
+  - path: data/processed/cleaned_train_data.json
+    md5: c6b22922ea499ac5ca97c57602694c45
+    size: 9812841
+  - path: data/processed/cleaned_val_data.json
+    md5: 13fdb7e089cd6268ff91ede65dd226f0
+    size: 1232040
+  - path: data/processed/optimal_credit_bins.json
+    md5: b9c23dc2b9b202e57e0beb8743b06e1c
+    size: 507
+  - path: fake_news/train.py
+    md5: 4dfd7354e6cb72be66c4158bc193351c
+    size: 8622
+  outs:
+  - path: data/processed/test_features.pkl
+    md5: 5c9d13a1c0f9e62aaa22e2ff29443b67
+    size: 382230
+  - path: data/processed/train_features.pkl
+    md5: bf7299a21788d7363dec7408daf1dc1a
+    size: 3149348
+  - path: data/processed/val_features.pkl
+    md5: b7cf33e32d661dad8e8171c5602ce6d1
+    size: 382355
+  - path: model_checkpoints/random_forest
+    md5: b18b7b5db8e16060137729e861dec270.dir
+    size: 50552279
+    nfiles: 3

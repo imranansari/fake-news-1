@@ -1,13 +1,13 @@
 {
   "model": "random_forest",
-  "train_data_path": "../data/processed/cleaned_train_data.json",
-  "val_data_path": "../data/processed/cleaned_val_data.json",
-  "test_data_path": "../data/processed/cleaned_test_data.json",
-  "train_cached_features_path": "../data/processed/train_features.pkl",
-  "val_cached_features_path": "../data/processed/val_features.pkl",
-  "test_cached_features_path": "../data/processed/test_features.pkl",
-  "credit_bins_path": "../data/processed/optimal_credit_bins.json",
-  "model_output_path": "../model_checkpoints/random_forest",
+  "train_data_path": "data/processed/cleaned_train_data.json",
+  "val_data_path": "data/processed/cleaned_val_data.json",
+  "test_data_path": "data/processed/cleaned_test_data.json",
+  "train_cached_features_path": "data/processed/train_features.pkl",
+  "val_cached_features_path": "data/processed/val_features.pkl",
+  "test_cached_features_path": "data/processed/test_features.pkl",
+  "credit_bins_path": "data/processed/optimal_credit_bins.json",
+  "model_output_path": "model_checkpoints/random_forest",
   "evaluate": false,
   "params": {
 

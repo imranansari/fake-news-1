@@ -19,3 +19,17 @@ stages:
     - data/processed/cleaned_test_data.json
     - data/processed/cleaned_train_data.json
     - data/processed/cleaned_val_data.json
+  train-random-forest:
+    cmd: python fake_news/train.py --config-file config/random_forest.json
+    deps:
+    - config/random_forest.json
+    - data/processed/cleaned_test_data.json
+    - data/processed/cleaned_train_data.json
+    - data/processed/cleaned_val_data.json
+    - data/processed/optimal_credit_bins.json
+    - fake_news/train.py
+    outs:
+    - data/processed/test_features.pkl
+    - data/processed/train_features.pkl
+    - data/processed/val_features.pkl
+    - model_checkpoints/random_forest
