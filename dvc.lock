@@ -67,6 +67,6 @@ train-random-forest:
     md5: b7cf33e32d661dad8e8171c5602ce6d1
     size: 382355
   - path: model_checkpoints/random_forest
-    md5: b18b7b5db8e16060137729e861dec270.dir
-    size: 50552279
+    md5: ec91f888fb8577ac5f5b09480e8d395a.dir
+    size: 50552390
     nfiles: 3
