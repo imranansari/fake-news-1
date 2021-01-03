@@ -10,6 +10,9 @@ pip-chill==1.0.0
 plotly==4.11.0
 pydantic==1.7.3
 pytest==6.0.2
+pytorch-lightning==1.1.2
 shap==0.37.0
 sklearn==0.0
+torchvision==0.7.0
+transformers==3.5.0
 vadersentiment==3.3.2

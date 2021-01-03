@@ -4,26 +4,24 @@ import logging
 import os
 import pickle
 import random
-from functools import partial
 from typing import Dict
 from typing import List
 from typing import Optional
 
 import mlflow
 import numpy as np
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
+import torch
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_auc_score
 from sklearn.pipeline import FeatureUnion
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
+from torch.utils.data import DataLoader
 
+from fake_news.model.transformer_based import RobertaModel
 from fake_news.model.tree_based import RandomForestModel
+from fake_news.utils.dataloaders import FakeNewsTorchDataset
 from fake_news.utils.features import compute_bin_idx
-from fake_news.utils.reader import read_json_data
 
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
@@ -62,7 +60,9 @@ def extract_statements(datapoints: List[Dict]) -> List[str]:
 def set_random_seed() -> None:
     random.seed(42)
     np.random.seed(42)
-    # TODO (mihail): Add torch random seeds when we get to those models
+    # Torch-specific random-seeds
+    torch.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
 
 
 def get_all_feature_names(feature_transform: FeatureUnion) -> List[str]:
@@ -115,68 +115,36 @@ if __name__ == "__main__":
     if config["evaluate"] and os.path.exists(train_cached_feature_path) and \
         os.path.exists(val_cached_feature_path) and \
         os.path.exists(test_cached_feature_path):
-        LOGGER.info("Loading up cached features from disk...")
-        with open(train_cached_feature_path, "rb") as f:
-            train_features, train_labels = pickle.load(f)
-        with open(val_cached_feature_path, "rb") as f:
-            val_features, val_labels = pickle.load(f)
-        with open(test_cached_feature_path, "rb") as f:
-            test_features, test_labels = pickle.load(f)
+        pass
     else:
         LOGGER.info("Featurizing data from scratch...")
         train_data_path = os.path.join(base_dir, config["train_data_path"])
         val_data_path = os.path.join(base_dir, config["val_data_path"])
         test_data_path = os.path.join(base_dir, config["test_data_path"])
         # Read data
-        train_datapoints = read_json_data(train_data_path)
-        val_datapoints = read_json_data(val_data_path)
-        test_datapoints = read_json_data(test_data_path)
-        # TODO (mihail): Abstract away this featurization to not be model-specific
-        # Featurize
-        dict_featurizer = DictVectorizer()
-        tfidf_featurizer = TfidfVectorizer()
+        # train_datapoints = read_json_data(train_data_path)
+        # val_datapoints = read_json_data(val_data_path)
+        # test_datapoints = read_json_data(test_data_path)
+        train_data = FakeNewsTorchDataset(config, split="train")
+        val_data = FakeNewsTorchDataset(config, split="val")
+        test_data = FakeNewsTorchDataset(config, split="test")
         
-        statement_transformer = FunctionTransformer(extract_statements)
-        manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
-                                                                 optimal_credit_bins_path=
-                                                                 os.path.join(base_dir,
-                                                                              config["credit_bins_path"])))
+        train_dataloader = DataLoader(train_data,
+                                      shuffle=True,
+                                      batch_size=config["batch_size"],
+                                      pin_memory=True)
+        val_dataloader = DataLoader(val_data,
+                                    shuffle=True,
+                                    batch_size=config["batch_size"],
+                                    pin_memory=True)
         
-        manual_feature_pipeline = Pipeline([
-            ("manual_features", manual_feature_transformer),
-            ("manual_featurizer", dict_featurizer)
-        ])
+        model = RobertaModel(config)
+        model.train(train_dataloader)
         
-        ngram_feature_pipeline = Pipeline([
-            ("statements", statement_transformer),
-            ("ngram_featurizer", tfidf_featurizer)
-        ])
-        
-        combined_featurizer = FeatureUnion([
-            ("manual_feature_pipe", manual_feature_pipeline),
-            # TODO (mihail): Change this name
-            ("ngram_featurizer", ngram_feature_pipeline)
-        ])
-        
-        train_features = combined_featurizer.fit_transform(train_datapoints)
-        val_features = combined_featurizer.transform(val_datapoints)
-        test_features = combined_featurizer.transform(test_datapoints)
-        
-        train_labels = [datapoint["label"] for datapoint in train_datapoints]
-        val_labels = [datapoint["label"] for datapoint in val_datapoints]
-        test_labels = [datapoint["label"] for datapoint in test_datapoints]
-        
-        # Dump to cache
-        with open(train_cached_feature_path, "wb") as f:
-            pickle.dump([train_features, train_labels], f)
-        with open(val_cached_feature_path, "wb") as f:
-            pickle.dump([val_features, val_labels], f)
-        with open(test_cached_feature_path, "wb") as f:
-            pickle.dump([test_features, test_labels], f)
-        
-        feature_names = get_all_feature_names(combined_featurizer)
-        with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
-            pickle.dump(feature_names, f)
+        output = model.predict(val_dataloader)
+        print(output)
+        # with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
+        #     pickle.dump(feature_names, f)
     
     with mlflow.start_run() as run:
         with open(os.path.join(model_output_path, "meta.json"), "w") as f:
