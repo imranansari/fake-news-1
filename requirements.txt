@@ -1,3 +1,4 @@
+awscli==1.18.207
 dvc==1.11.9
 editdistance==0.5.3
 gensim==3.8.3
