@@ -18,6 +18,6 @@ jobs:
         run: echo "GE_DIR=`pwd`" >> $GITHUB_ENV
       - name: Run unit tests
         run: pytest tests/
-      - name: Run great expectations
+      - name: Run great expectations tests
         working-directory: /home/fake-news/tests
         run: python great_expectations/validate_data.py
