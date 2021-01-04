@@ -6,8 +6,8 @@ jobs:
     container:
       image: docker.io/mihail911/fake-news:v1
       credentials:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{  secrets.DOCKER_PAT }}
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_PAT }}
     steps:
       - name: Set env variables
         run: echo "PYTHONPATH=$PYTHONPATH:`pwd`" >> $GITHUB_ENV
