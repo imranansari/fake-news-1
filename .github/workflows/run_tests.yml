@@ -1,5 +1,8 @@
 name: run-tests
 on: [push]
+defaults:
+  run:
+    working-directory: /home/fake-news
 jobs:
   run-tests:
     runs-on: ubuntu-latest
@@ -15,8 +18,8 @@ jobs:
         run: cd /home/fake-news
       - name: Echo vars
         run: echo "$PYTHONPATH"
-      - name: Echo vars
-        run: echo /__w/
+      - name: ls vars
+        run: ls /__w/
       - name: ls stuff
         run: ls
       - name: Run unit tests
