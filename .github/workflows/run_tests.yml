@@ -12,4 +12,5 @@ jobs:
       - name: Set env variables
         run: echo "PYTHONPATH=$PYTHONPATH:`pwd`" >> $GITHUB_ENV
       - name: Run unit tests
+        working-directory: ../
         run: pytest tests/
