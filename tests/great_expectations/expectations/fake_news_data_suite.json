@@ -20,8 +20,7 @@
           "half_true_count",
           "mostly_true_count",
           "pants_fire_count",
-          "context",
-          "justification"
+          "context"
         ]
       },
       "meta": {}
