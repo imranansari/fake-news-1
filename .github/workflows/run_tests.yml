@@ -12,15 +12,12 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PAT }}
     steps:
-      - name: Set env variables
+      - name: Set Python path variables
         run: echo "PYTHONPATH=$PYTHONPATH:/home/fake-news" >> $GITHUB_ENV
-      - name: Change working directory
-        run: cd /home/fake-news
-      - name: Echo vars
-        run: echo "$PYTHONPATH"
-      - name: ls vars
-        run: ls /__w/
-      - name: ls stuff
-        run: ls
+      - name: Set GE DIR
+        run: echo "GE_DIR=`pwd`" >> $GITHUB_ENV
       - name: Run unit tests
         run: pytest tests/
+      - name: Run great expectations
+        working-directory: /home/fake-news/tests
+        run: python great_expectations/validate_data.py
