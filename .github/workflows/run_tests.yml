@@ -10,7 +10,11 @@ jobs:
         password: ${{ secrets.DOCKERHUB_PAT }}
     steps:
       - name: Set env variables
-        run: echo "PYTHONPATH=$PYTHONPATH:`pwd`" >> $GITHUB_ENV
+        run: echo "PYTHONPATH=$PYTHONPATH:/home/fake-news" >> $GITHUB_ENV
+      - name: Change working directory
+        run: cd "/home/fake-news"
+      - name: Echo vars
+        run: echo "$PYTHONPATH"
       - name: Run unit tests
         working-directory: ../
         run: pytest tests/
