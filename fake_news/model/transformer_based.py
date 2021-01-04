@@ -36,6 +36,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
+        print(f"Train Loss: {output[0]}")
         return output[0]
     
     def validation_step(self, batch, batch_idx):
@@ -43,6 +44,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
+        print(f"Val Loss: {output[0]}")
         return output[0]
     
     def test_step(self, batch, batch_idx):
@@ -62,10 +64,10 @@ class RobertaModel(object):
         self.config = config
         self.model = RobertaModule(config)
         self.trainer = Trainer(max_epochs=self.config["num_epochs"],
-                               gpus=0 if torch.cuda.is_available() else None)
+                               gpus=1 if torch.cuda.is_available() else None)
     
-    def train(self, dataloader: DataLoader):
-        self.trainer.fit(self.model, dataloader)
+    def train(self, dataloader: DataLoader, val_dataloader):
+        self.trainer.fit(self.model, dataloader, val_dataloader)
     
     def predict(self, dataloader: DataLoader):
         self.trainer.test(self.model, test_dataloaders=dataloader)

@@ -37,7 +37,7 @@ class FakeNewsTorchDataset(torch.utils.data.Dataset):
                 # TODO (mihail): `return_tensors=pt`?
                 tokenized = tokenizer(datapoint["statement"],
                                       padding="max_length",
-                                      max_length=32,
+                                      max_length=config["max_seq_len"],
                                       truncation=True,
                                       return_tensors="np",
                                       return_token_type_ids=True,

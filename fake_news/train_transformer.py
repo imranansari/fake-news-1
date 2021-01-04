@@ -139,7 +139,7 @@ if __name__ == "__main__":
                                     pin_memory=True)
         
         model = RobertaModel(config)
-        model.train(train_dataloader)
+        model.train(train_dataloader, val_dataloader)
         
         output = model.predict(val_dataloader)
         print(output)
