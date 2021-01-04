@@ -11,9 +11,10 @@
   "tokenizer_path": "roberta-base",
   "model_type": "roberta-base",
   "evaluate": false,
-  "batch_size": 4,
-  "learning_rate": 1e-4,
-  "num_epochs": 4,
+  "batch_size": 80,
+  "max_seq_len": 64,
+  "learning_rate": 5e-5,
+  "num_epochs": 20,
   "params": {
 
   }
