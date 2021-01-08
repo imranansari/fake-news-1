@@ -70,4 +70,6 @@ class RobertaModel(object):
         self.trainer.fit(self.model, dataloader, val_dataloader)
     
     def predict(self, dataloader: DataLoader):
-        self.trainer.test(self.model, test_dataloaders=dataloader)
+        results = self.trainer.test(self.model, test_dataloaders=dataloader)
+        print(f"Results: {results}")
+        return results
