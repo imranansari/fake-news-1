@@ -1,6 +1,6 @@
 {
   "model": "roberta",
-  "train_data_path": "data/processed/cleaned_train_data.json",
+  "train_data_path": "data/processed/cleaned_small_data.json",
   "val_data_path": "data/processed/cleaned_val_data.json",
   "test_data_path": "data/processed/cleaned_test_data.json",
   "train_cached_features_path": "data/processed/train_roberta_features.pkl",
@@ -14,7 +14,7 @@
   "batch_size": 80,
   "max_seq_len": 64,
   "learning_rate": 5e-5,
-  "num_epochs": 20,
+  "num_epochs": 5,
   "params": {
 
   }
