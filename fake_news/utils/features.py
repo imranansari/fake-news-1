@@ -1,8 +1,18 @@
+import json
+import os
 from copy import deepcopy
+from functools import partial
 from typing import Dict
 from typing import List
 
+import numpy as np
 # Mapping from speaker title variants seen in data to their canonical form
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import FeatureUnion
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
+
 CANONICAL_SPEAKER_TITLES = {
     "u.s. house of representative": "u.s. house of representatives",
     "u.s. representativej": "u.s. representative",
@@ -52,6 +62,71 @@ PARTY_AFFILIATIONS = {
     "democratic-farmer-labor", "ocean-state-tea-party-action",
     "constitution-party"
 }
+
+
+def extract_manual_features(datapoints: List[Dict], optimal_credit_bins_path: str) -> List[Dict]:
+    all_features = []
+    with open(optimal_credit_bins_path) as f:
+        optimal_credit_bins = json.load(f)
+    for datapoint in datapoints:
+        features = {}
+        features["speaker"] = datapoint["speaker"]
+        features["speaker_title"] = datapoint["speaker_title"]
+        features["state_info"] = datapoint["state_info"]
+        features["party_affiliation"] = datapoint["party_affiliation"]
+        # Compute credit score features
+        for feat in ["barely_true_count", "false_count", "half_true_count", "mostly_true_count", "pants_fire_count"]:
+            features[feat] = str(compute_bin_idx(datapoint[feat], optimal_credit_bins[feat]))
+        all_features.append(features)
+    return all_features
+
+
+def extract_statements(datapoints: List[Dict]) -> List[str]:
+    return [datapoint["statement"] for datapoint in datapoints]
+
+
+class TreeFeaturizer():
+    def __init__(self, config: Dict, base_dir: str):
+        dict_featurizer = DictVectorizer()
+        tfidf_featurizer = TfidfVectorizer()
+        
+        statement_transformer = FunctionTransformer(extract_statements)
+        manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
+                                                                 optimal_credit_bins_path=
+                                                                 os.path.join(base_dir,
+                                                                              config["credit_bins_path"])))
+        
+        manual_feature_pipeline = Pipeline([
+            ("manual_features", manual_feature_transformer),
+            ("manual_featurizer", dict_featurizer)
+        ])
+        
+        ngram_feature_pipeline = Pipeline([
+            ("statements", statement_transformer),
+            ("ngram_featurizer", tfidf_featurizer)
+        ])
+        
+        self.combined_featurizer = FeatureUnion([
+            ("manual_feature_pipe", manual_feature_pipeline),
+            ("ngram_feature_pipe", ngram_feature_pipeline)
+        ])
+    
+    def get_all_feature_names(self) -> List[str]:
+        all_feature_names = []
+        for name, pipeline in self.combined_featurizer.transformer_list:
+            final_pipe_name, final_pipe_transformer = pipeline.steps[-1]
+            all_feature_names.extend(final_pipe_transformer.get_feature_names())
+        return all_feature_names
+    
+    def save_params(self):
+        # TODO (mihail): Cache featurizer weights
+        pass
+    
+    def fit(self, datapoints: List[Dict]) -> None:
+        self.combined_featurizer.fit_transform(datapoints)
+    
+    def featurize(self, datapoints: List[Dict]) -> np.array:
+        return self.combined_featurizer.transform(datapoints)
 
 
 def compute_bin_idx(val: float, bins: List[float]) -> int:

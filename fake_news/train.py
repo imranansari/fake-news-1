@@ -22,6 +22,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 
 from fake_news.model.tree_based import RandomForestModel
+from fake_news.utils.features import TreeFeaturizer
 from fake_news.utils.features import compute_bin_idx
 from fake_news.utils.reader import read_json_data
 
@@ -63,14 +64,6 @@ def set_random_seed() -> None:
     random.seed(42)
     np.random.seed(42)
     # TODO (mihail): Add torch random seeds when we get to those models
-
-
-def get_all_feature_names(feature_transform: FeatureUnion) -> List[str]:
-    all_feature_names = []
-    for name, pipeline in feature_transform.transformer_list:
-        final_pipe_name, final_pipe_transformer = pipeline.steps[-1]
-        all_feature_names.extend(final_pipe_transformer.get_feature_names())
-    return all_feature_names
 
 
 # TODO (mihail): Define types for datapoint
@@ -133,35 +126,11 @@ if __name__ == "__main__":
         test_datapoints = read_json_data(test_data_path)
         # TODO (mihail): Abstract away this featurization to not be model-specific
         # Featurize
-        dict_featurizer = DictVectorizer()
-        tfidf_featurizer = TfidfVectorizer()
-        
-        statement_transformer = FunctionTransformer(extract_statements)
-        manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
-                                                                 optimal_credit_bins_path=
-                                                                 os.path.join(base_dir,
-                                                                              config["credit_bins_path"])))
-        
-        manual_feature_pipeline = Pipeline([
-            ("manual_features", manual_feature_transformer),
-            ("manual_featurizer", dict_featurizer)
-        ])
-        
-        ngram_feature_pipeline = Pipeline([
-            ("statements", statement_transformer),
-            ("ngram_featurizer", tfidf_featurizer)
-        ])
-        
-        combined_featurizer = FeatureUnion([
-            ("manual_feature_pipe", manual_feature_pipeline),
-            # TODO (mihail): Change this name
-            ("ngram_featurizer", ngram_feature_pipeline)
-        ])
-        
-        train_features = combined_featurizer.fit_transform(train_datapoints)
-        val_features = combined_featurizer.transform(val_datapoints)
-        test_features = combined_featurizer.transform(test_datapoints)
-        
+        featurizer = TreeFeaturizer(config, base_dir)
+        featurizer.fit(train_datapoints)
+        train_features = featurizer.featurize(train_datapoints)
+        val_features = featurizer.featurize(val_datapoints)
+        test_features = featurizer.featurize(test_datapoints)
         train_labels = [datapoint["label"] for datapoint in train_datapoints]
         val_labels = [datapoint["label"] for datapoint in val_datapoints]
         test_labels = [datapoint["label"] for datapoint in test_datapoints]
@@ -174,7 +143,7 @@ if __name__ == "__main__":
         with open(test_cached_feature_path, "wb") as f:
             pickle.dump([test_features, test_labels], f)
         
-        feature_names = get_all_feature_names(combined_featurizer)
+        feature_names = featurizer.get_all_feature_names()
         with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
             pickle.dump(feature_names, f)
     
@@ -196,6 +165,7 @@ if __name__ == "__main__":
             model.train(train_features, train_labels)
             
             # Cache model weights on disk
+            # TODO (mihail): Only dump underlying sklearn classifier
             with open(os.path.join(model_output_path, "model.pkl"), "wb") as f:
                 pickle.dump(model, f)
         mlflow.log_params(model.get_params())
