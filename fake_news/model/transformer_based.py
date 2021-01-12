@@ -44,7 +44,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
-        print(f"Val Loss: {output[0]}")
+        # print(f"Val Loss: {output[0]}")
         return output[0]
     
     def test_step(self, batch, batch_idx):
@@ -52,6 +52,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
+        self.log("test_loss", output[0])
         return output[0]
     
     def configure_optimizers(self):
@@ -67,7 +68,21 @@ class RobertaModel(object):
                                gpus=1 if torch.cuda.is_available() else None)
     
     def train(self, dataloader: DataLoader, val_dataloader):
-        self.trainer.fit(self.model, dataloader, val_dataloader)
+        self.trainer.fit(self.model, dataloader)  # val_dataloader)
     
     def predict(self, dataloader: DataLoader):
-        self.trainer.test(self.model, test_dataloaders=dataloader)
+        self.model.eval()
+        predicted = []
+        self.model.cuda()
+        with torch.no_grad():
+            for idx, batch in enumerate(dataloader):
+                print(f"IDX: {idx}, {batch['ids'].shape}, {self.model.device}, {batch['ids'].device}")
+                print(f"{self.model.device}")
+                
+                output = self.model(input_ids=batch["ids"].cuda(),
+                                    attention_mask=batch["attention_mask"].cuda(),
+                                    token_type_ids=batch["type_ids"].cuda(),
+                                    labels=batch["label"].cuda())
+                print(f"Output: {output[0].device}")
+                predicted.append(output[1])
+        return torch.cat(predicted, axis=0).cpu().detach().numpy()

@@ -134,18 +134,24 @@ if __name__ == "__main__":
                                       batch_size=config["batch_size"],
                                       pin_memory=True)
         val_dataloader = DataLoader(val_data,
-                                    shuffle=True,
-                                    batch_size=config["batch_size"],
+                                    shuffle=False,
+                                    batch_size=16,
                                     pin_memory=True)
         
         model = RobertaModel(config)
         model.train(train_dataloader, val_dataloader)
-        
-        output = model.predict(val_dataloader)
-        print(output)
-        # with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
-        #     pickle.dump(feature_names, f)
-    
+        expected_labels = []
+        for batch in val_dataloader: 
+            expected_labels.extend(batch["label"].cpu().numpy())
+        print(expected_labels)
+        predicted_proba = model.predict(val_dataloader)
+        predicted_labels = np.argmax(predicted_proba, axis=1)
+        accuracy = accuracy_score(expected_labels, predicted_labels)
+        f1 = f1_score(expected_labels, predicted_labels)
+        auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
+        conf_mat = confusion_matrix(expected_labels, predicted_labels)
+        print(f"Accuracy: {accuracy}, F1: {f1}, AUC: {auc}")
+ 
     with mlflow.start_run() as run:
         with open(os.path.join(model_output_path, "meta.json"), "w") as f:
             json.dump({"mlflow_run_id": run.info.run_id}, f)
@@ -159,13 +165,7 @@ if __name__ == "__main__":
             with open(os.path.join(model_output_path, "model.pkl"), "rb") as f:
                 model = pickle.load(f)
         else:
-            LOGGER.info("Training model...")
-            model = RandomForestModel()
-            model.train(train_features, train_labels)
-            
-            # Cache model weights on disk
-            with open(os.path.join(model_output_path, "model.pkl"), "wb") as f:
-                pickle.dump(model, f)
+            pass
         mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")
         metrics = compute_metrics(model, val_features, val_labels, split="val")
