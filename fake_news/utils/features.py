@@ -1,9 +1,12 @@
 import json
+import logging
 import os
+import pickle
 from copy import deepcopy
 from functools import partial
 from typing import Dict
 from typing import List
+from typing import Optional
 
 import numpy as np
 # Mapping from speaker title variants seen in data to their canonical form
@@ -12,6 +15,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
+
+logging.basicConfig(
+    format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
+    level=logging.DEBUG
+)
+LOGGER = logging.getLogger(__name__)
 
 CANONICAL_SPEAKER_TITLES = {
     "u.s. house of representative": "u.s. house of representatives",
@@ -85,31 +94,58 @@ def extract_statements(datapoints: List[Dict]) -> List[str]:
     return [datapoint["statement"] for datapoint in datapoints]
 
 
-class TreeFeaturizer():
-    def __init__(self, config: Dict, base_dir: str):
-        dict_featurizer = DictVectorizer()
-        tfidf_featurizer = TfidfVectorizer()
-        
-        statement_transformer = FunctionTransformer(extract_statements)
-        manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
-                                                                 optimal_credit_bins_path=
-                                                                 os.path.join(base_dir,
-                                                                              config["credit_bins_path"])))
-        
-        manual_feature_pipeline = Pipeline([
-            ("manual_features", manual_feature_transformer),
-            ("manual_featurizer", dict_featurizer)
-        ])
-        
-        ngram_feature_pipeline = Pipeline([
-            ("statements", statement_transformer),
-            ("ngram_featurizer", tfidf_featurizer)
-        ])
-        
-        self.combined_featurizer = FeatureUnion([
-            ("manual_feature_pipe", manual_feature_pipeline),
-            ("ngram_feature_pipe", ngram_feature_pipeline)
-        ])
+def construct_datapoint(input: str) -> Dict:
+    # TODO (mihail): What are reasonable defaults for other features
+    return {
+        "statement": input,
+        "speaker": "",
+        "subject": "",
+        "speaker_title": "",
+        "state_info": "",
+        "party_affiliation": "",
+        "barely_true_count": float("nan"),
+        "false_count": float("nan"),
+        "half_true_count": float("nan"),
+        "mostly_true_count": float("nan"),
+        "pants_fire_count": float("nan"),
+        "context": "",
+        "justification": ""
+    }
+
+
+class TreeFeaturizer(object):
+    def __init__(self, featurizer_cache_path: str, config: Optional[Dict] = None):
+        if os.path.exists(featurizer_cache_path):
+            LOGGER.info("Loading featurizer from cache...")
+            # TODO (mihail): Fill in here
+            with open(featurizer_cache_path, "rb") as f:
+                self.combined_featurizer = pickle.load(f)
+        else:
+            LOGGER.info("Creating featurizer from scratch...")
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            dict_featurizer = DictVectorizer()
+            tfidf_featurizer = TfidfVectorizer()
+            
+            statement_transformer = FunctionTransformer(extract_statements)
+            manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
+                                                                     optimal_credit_bins_path=
+                                                                     os.path.join(base_dir,
+                                                                                  config["credit_bins_path"])))
+            
+            manual_feature_pipeline = Pipeline([
+                ("manual_features", manual_feature_transformer),
+                ("manual_featurizer", dict_featurizer)
+            ])
+            
+            ngram_feature_pipeline = Pipeline([
+                ("statements", statement_transformer),
+                ("ngram_featurizer", tfidf_featurizer)
+            ])
+            
+            self.combined_featurizer = FeatureUnion([
+                ("manual_feature_pipe", manual_feature_pipeline),
+                ("ngram_feature_pipe", ngram_feature_pipeline)
+            ])
     
     def get_all_feature_names(self) -> List[str]:
         all_feature_names = []
@@ -118,15 +154,16 @@ class TreeFeaturizer():
             all_feature_names.extend(final_pipe_transformer.get_feature_names())
         return all_feature_names
     
-    def save_params(self):
-        # TODO (mihail): Cache featurizer weights
-        pass
-    
     def fit(self, datapoints: List[Dict]) -> None:
-        self.combined_featurizer.fit_transform(datapoints)
+        self.combined_featurizer.fit(datapoints)
     
     def featurize(self, datapoints: List[Dict]) -> np.array:
         return self.combined_featurizer.transform(datapoints)
+    
+    def save(self, featurizer_cache_path: str):
+        LOGGER.info("Saving featurizer to disk...")
+        with open(featurizer_cache_path, "wb") as f:
+            pickle.dump(self.combined_featurizer, f)
 
 
 def compute_bin_idx(val: float, bins: List[float]) -> int:
