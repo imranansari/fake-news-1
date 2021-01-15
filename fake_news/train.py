@@ -4,22 +4,18 @@ import logging
 import os
 import pickle
 import random
-from functools import partial
+from shutil import copy
+from shutil import copyfile
 from typing import Dict
 from typing import List
 from typing import Optional
 
 import mlflow
 import numpy as np
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
 from sklearn.metrics import roc_auc_score
-from sklearn.pipeline import FeatureUnion
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
 
 from fake_news.model.tree_based import RandomForestModel
 from fake_news.utils.features import TreeFeaturizer
@@ -105,6 +101,8 @@ if __name__ == "__main__":
     test_cached_feature_path = os.path.join(base_dir, config["test_cached_features_path"])
     model_output_path = os.path.join(base_dir, config["model_output_path"])
     os.makedirs(model_output_path, exist_ok=True)
+    # Copy config to model directory
+    copy(args.config_file, model_output_path)
     if config["evaluate"] and os.path.exists(train_cached_feature_path) and \
         os.path.exists(val_cached_feature_path) and \
         os.path.exists(test_cached_feature_path):
@@ -126,7 +124,8 @@ if __name__ == "__main__":
         test_datapoints = read_json_data(test_data_path)
         # TODO (mihail): Abstract away this featurization to not be model-specific
         # Featurize
-        featurizer = TreeFeaturizer(config, base_dir)
+        featurizer = TreeFeaturizer(os.path.join(base_dir, config["featurizer_output_path"], "featurizer.pkl"),
+                                    config)
         featurizer.fit(train_datapoints)
         train_features = featurizer.featurize(train_datapoints)
         val_features = featurizer.featurize(val_datapoints)
@@ -135,7 +134,7 @@ if __name__ == "__main__":
         val_labels = [datapoint["label"] for datapoint in val_datapoints]
         test_labels = [datapoint["label"] for datapoint in test_datapoints]
         
-        # Dump to cache
+        # Dump features to cache
         with open(train_cached_feature_path, "wb") as f:
             pickle.dump([train_features, train_labels], f)
         with open(val_cached_feature_path, "wb") as f:
@@ -146,7 +145,7 @@ if __name__ == "__main__":
         feature_names = featurizer.get_all_feature_names()
         with open(os.path.join(model_output_path, "feature_names.pkl"), "wb") as f:
             pickle.dump(feature_names, f)
-    
+        featurizer.save(os.path.join(base_dir, config["featurizer_output_path"], "featurizer.pkl"))
     with mlflow.start_run() as run:
         with open(os.path.join(model_output_path, "meta.json"), "w") as f:
             json.dump({"mlflow_run_id": run.info.run_id}, f)
@@ -157,17 +156,15 @@ if __name__ == "__main__":
             LOGGER.info("Loading up previously saved model...")
             if not os.path.exists(os.path.join(model_output_path)):
                 raise ValueError("Model output path does not exist but in `evaluate` mode!")
-            with open(os.path.join(model_output_path, "model.pkl"), "rb") as f:
-                model = pickle.load(f)
+            model = RandomForestModel(os.path.join(model_output_path, "model.pkl"))
         else:
             LOGGER.info("Training model...")
             model = RandomForestModel()
             model.train(train_features, train_labels)
             
             # Cache model weights on disk
-            # TODO (mihail): Only dump underlying sklearn classifier
-            with open(os.path.join(model_output_path, "model.pkl"), "wb") as f:
-                pickle.dump(model, f)
+            model.save(os.path.join(model_output_path, "model.pkl"))
+            
         mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")
         metrics = compute_metrics(model, val_features, val_labels, split="val")

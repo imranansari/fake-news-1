@@ -8,7 +8,6 @@
     "declarativeContent"
   ],
   "browser_action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "images/trump_amca_16.png",
       "32": "images/trump_amca_32.png",
@@ -42,11 +41,5 @@
       "run_at": "document_end"
     }
   ],
-  "background": {
-    "scripts": [
-      "background.js"
-    ],
-    "persistent": false
-  },
   "manifest_version": 2
 }
