@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import List
 
@@ -11,6 +12,11 @@ from fake_news.model.tree_based import RandomForestModel
 from fake_news.utils.features import TreeFeaturizer
 from fake_news.utils.features import construct_datapoint
 
+logging.basicConfig(
+    format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
+    level=logging.DEBUG
+)
+LOGGER = logging.getLogger(__name__)
 
 class Settings(BaseSettings):
     model_dir: str
@@ -49,4 +55,6 @@ def predict_fakeness(statement: Statement):
     features = featurizer.featurize([datapoint])
     probs = model.predict(features)
     label = np.argmax(probs, axis=1)
-    return Prediction(label=label[0], probs=list(probs[0]))
+    prediction = Prediction(label=label[0], probs=list(probs[0]))
+    LOGGER.info(prediction)
+    return prediction
