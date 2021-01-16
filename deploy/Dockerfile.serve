@@ -12,5 +12,3 @@ WORKDIR /home/fake-news
 ENV PYTHONPATH $PYTHONPATH:/home/fake-news
 
 RUN pip install --no-cache-dir -r requirements.txt
-
-
