@@ -1,0 +1,16 @@
+FROM tiangolo/uvicorn-gunicorn-fastapi:python3.8 as base
+# TODO (mihail): Try a mult-stage Docker file
+#FROM python:3.8
+
+# TODO (mihail): Don't dump entire directory into image
+ADD fake_news /home/fake-news/fake_news
+ADD requirements.txt /home/fake-news/
+ADD model_checkpoints/random_forest /home/fake-news/random_forest
+
+WORKDIR /home/fake-news
+
+ENV PYTHONPATH $PYTHONPATH:/home/fake-news
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+

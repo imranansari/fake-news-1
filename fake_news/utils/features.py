@@ -73,10 +73,8 @@ PARTY_AFFILIATIONS = {
 }
 
 
-def extract_manual_features(datapoints: List[Dict], optimal_credit_bins_path: str) -> List[Dict]:
+def extract_manual_features(datapoints: List[Dict], optimal_credit_bins: Dict) -> List[Dict]:
     all_features = []
-    with open(optimal_credit_bins_path) as f:
-        optimal_credit_bins = json.load(f)
     for datapoint in datapoints:
         features = {}
         features["speaker"] = datapoint["speaker"]
@@ -123,14 +121,15 @@ class TreeFeaturizer(object):
         else:
             LOGGER.info("Creating featurizer from scratch...")
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            # Load optimal credit bins
+            with open(os.path.join(base_dir, config["credit_bins_path"])) as f:
+                optimal_credit_bins = json.load(f)
             dict_featurizer = DictVectorizer()
             tfidf_featurizer = TfidfVectorizer()
             
             statement_transformer = FunctionTransformer(extract_statements)
             manual_feature_transformer = FunctionTransformer(partial(extract_manual_features,
-                                                                     optimal_credit_bins_path=
-                                                                     os.path.join(base_dir,
-                                                                                  config["credit_bins_path"])))
+                                                                     optimal_credit_bins=optimal_credit_bins))
             
             manual_feature_pipeline = Pipeline([
                 ("manual_features", manual_feature_transformer),

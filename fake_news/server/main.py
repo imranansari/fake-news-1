@@ -42,6 +42,7 @@ class Prediction(BaseModel):
     probs: List[float]
 
 
+# TODO (mihail): Add model indicator as part of url path
 @app.post("/api/predict-fakeness", response_model=Prediction)
 def predict_fakeness(statement: Statement):
     datapoint = construct_datapoint(statement.text)
