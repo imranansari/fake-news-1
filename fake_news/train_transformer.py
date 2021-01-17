@@ -122,17 +122,6 @@ if __name__ == "__main__":
                                               filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
         model = RobertaModel(config, model_output_path)
         model.train(train_dataloader, val_dataloader)
-        # expected_labels = []
-        # for batch in val_dataloader:
-        #     expected_labels.extend(batch["label"].cpu().numpy())
-        # print(expected_labels)
-        # predicted_proba = model.predict(val_dataloader)
-        # predicted_labels = np.argmax(predicted_proba, axis=1)
-        # accuracy = accuracy_score(expected_labels, predicted_labels)
-        # f1 = f1_score(expected_labels, predicted_labels)
-        # auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
-        # conf_mat = confusion_matrix(expected_labels, predicted_labels)
-        # print(f"Accuracy: {accuracy}, F1: {f1}, AUC: {auc}")
     
     with mlflow.start_run() as run:
         with open(os.path.join(model_output_path, "meta.json"), "w") as f:
@@ -148,7 +137,7 @@ if __name__ == "__main__":
                 model = pickle.load(f)
         else:
             pass
-        mlflow.log_params(model.get_params())
+        #mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")
         metrics = compute_metrics(model, val_dataloader, split="val")
         LOGGER.info(f"Test metrics: {metrics}")
