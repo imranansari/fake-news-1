@@ -83,7 +83,8 @@ class RobertaModel(object):
             checkpoint_callback = ModelCheckpoint(monitor="val_loss",
                                                   mode="min",
                                                   dirpath=model_cache_path,
-                                                  filename="roberta-model-epoch={epoch}-val_loss={val_loss:.4f}")
+                                                  filename="roberta-model-epoch={epoch}-val_loss={val_loss:.4f}",
+                                                  save_weights_only=True)
             
             self.trainer = Trainer(max_epochs=self.config["num_epochs"],
                                    gpus=1 if torch.cuda.is_available() else None,
