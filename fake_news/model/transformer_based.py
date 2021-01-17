@@ -55,7 +55,7 @@ class RobertaModule(pl.LightningModule):
     def validation_epoch_end(
         self, outputs: List[float]
     ) -> None:
-        avg_val_loss = sum(outputs) / len(outputs)
+        avg_val_loss = float(sum(outputs) / len(outputs))
         mlflow.log_metric("avg_val_loss", avg_val_loss, self.current_epoch)
         print(f"Avg val loss: {avg_val_loss}")
     
