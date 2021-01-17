@@ -87,7 +87,8 @@ class RobertaModel(object):
             
             self.trainer = Trainer(max_epochs=self.config["num_epochs"],
                                    gpus=1 if torch.cuda.is_available() else None,
-                                   callbacks=[checkpoint_callback])
+                                   callbacks=[checkpoint_callback],
+                                   logger=False)
     
     def train(self, dataloader: DataLoader, val_dataloader: DataLoader):
         self.trainer.fit(self.model,
