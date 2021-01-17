@@ -93,52 +93,53 @@ if __name__ == "__main__":
     test_cached_feature_path = os.path.join(base_dir, config["test_cached_features_path"])
     model_output_path = os.path.join(base_dir, config["model_output_path"])
     os.makedirs(model_output_path, exist_ok=True)
-    if config["evaluate"] and os.path.exists(train_cached_feature_path) and \
-        os.path.exists(val_cached_feature_path) and \
-        os.path.exists(test_cached_feature_path):
-        pass
-    else:
-        LOGGER.info("Featurizing data from scratch...")
-        train_data_path = os.path.join(base_dir, config["train_data_path"])
-        val_data_path = os.path.join(base_dir, config["val_data_path"])
-        test_data_path = os.path.join(base_dir, config["test_data_path"])
-        # Read data
-        train_data = FakeNewsTorchDataset(config, split="train")
-        val_data = FakeNewsTorchDataset(config, split="val")
-        test_data = FakeNewsTorchDataset(config, split="test")
-        
-        train_dataloader = DataLoader(train_data,
-                                      shuffle=True,
-                                      batch_size=config["batch_size"],
-                                      pin_memory=True)
-        val_dataloader = DataLoader(val_data,
-                                    shuffle=False,
-                                    batch_size=16,
-                                    pin_memory=True)
-        
-        checkpoint_callback = ModelCheckpoint(monitor="val_loss",
-                                              mode="min",
-                                              dirpath=model_output_path,
-                                              filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
-        model = RobertaModel(config, model_output_path)
-        model.train(train_dataloader, val_dataloader)
     
     with mlflow.start_run() as run:
-        with open(os.path.join(model_output_path, "meta.json"), "w") as f:
-            json.dump({"mlflow_run_id": run.info.run_id}, f)
-        mlflow.set_tags({
-            "evaluate": config["evaluate"]
-        })
-        if config["evaluate"]:
-            LOGGER.info("Loading up previously saved model...")
-            if not os.path.exists(os.path.join(model_output_path)):
-                raise ValueError("Model output path does not exist but in `evaluate` mode!")
-            with open(os.path.join(model_output_path, "model.pkl"), "rb") as f:
-                model = pickle.load(f)
-        else:
+        if config["evaluate"] and os.path.exists(train_cached_feature_path) and \
+            os.path.exists(val_cached_feature_path) and \
+            os.path.exists(test_cached_feature_path):
             pass
-        #mlflow.log_params(model.get_params())
-        LOGGER.info("Evaluating model...")
-        metrics = compute_metrics(model, val_dataloader, split="val")
-        LOGGER.info(f"Test metrics: {metrics}")
-        mlflow.log_metrics(metrics)
+        else:
+            LOGGER.info("Featurizing data from scratch...")
+            train_data_path = os.path.join(base_dir, config["train_data_path"])
+            val_data_path = os.path.join(base_dir, config["val_data_path"])
+            test_data_path = os.path.join(base_dir, config["test_data_path"])
+            # Read data
+            train_data = FakeNewsTorchDataset(config, split="train")
+            val_data = FakeNewsTorchDataset(config, split="val")
+            test_data = FakeNewsTorchDataset(config, split="test")
+            
+            train_dataloader = DataLoader(train_data,
+                                          shuffle=True,
+                                          batch_size=config["batch_size"],
+                                          pin_memory=True)
+            val_dataloader = DataLoader(val_data,
+                                        shuffle=False,
+                                        batch_size=16,
+                                        pin_memory=True)
+            
+            checkpoint_callback = ModelCheckpoint(monitor="val_loss",
+                                                  mode="min",
+                                                  dirpath=model_output_path,
+                                                  filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
+            model = RobertaModel(config, model_output_path)
+            model.train(train_dataloader, val_dataloader)
+            
+            with open(os.path.join(model_output_path, "meta.json"), "w") as f:
+                json.dump({"mlflow_run_id": run.info.run_id}, f)
+            mlflow.set_tags({
+                "evaluate": config["evaluate"]
+            })
+            if config["evaluate"]:
+                LOGGER.info("Loading up previously saved model...")
+                if not os.path.exists(os.path.join(model_output_path)):
+                    raise ValueError("Model output path does not exist but in `evaluate` mode!")
+                with open(os.path.join(model_output_path, "model.pkl"), "rb") as f:
+                    model = pickle.load(f)
+            else:
+                pass
+            # mlflow.log_params(model.get_params())
+            LOGGER.info("Evaluating model...")
+            metrics = compute_metrics(model, val_dataloader, split="val")
+            LOGGER.info(f"Test metrics: {metrics}")
+            mlflow.log_metrics(metrics)

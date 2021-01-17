@@ -1,7 +1,9 @@
 import os
 from typing import Dict
+from typing import List
 from typing import Optional
 
+import mlflow
 import numpy as np
 import pytorch_lightning as pl
 import torch
@@ -50,6 +52,13 @@ class RobertaModule(pl.LightningModule):
         self.log("val_loss", output[0])
         return output[0]
     
+    def validation_epoch_end(
+        self, outputs: List[float]
+    ) -> None:
+        avg_val_loss = sum(outputs) / len(outputs)
+        mlflow.log_metric("avg_val_loss", avg_val_loss, self.current_epoch)
+        print(f"Avg val loss: {avg_val_loss}")
+    
     def test_step(self, batch, batch_idx):
         output = self(input_ids=batch["ids"],
                       attention_mask=batch["attention_mask"],
@@ -91,13 +100,9 @@ class RobertaModel(object):
         self.model.cuda()
         with torch.no_grad():
             for idx, batch in enumerate(dataloader):
-                print(f"IDX: {idx}, {batch['ids'].shape}, {self.model.device}, {batch['ids'].device}")
-                print(f"{self.model.device}")
-                
                 output = self.model(input_ids=batch["ids"].cuda(),
                                     attention_mask=batch["attention_mask"].cuda(),
                                     token_type_ids=batch["type_ids"].cuda(),
                                     labels=batch["label"].cuda())
-                print(f"Output: {output[0].device}")
                 predicted.append(output[1])
         return torch.cat(predicted, axis=0).cpu().detach().numpy()
