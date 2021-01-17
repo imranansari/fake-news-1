@@ -16,6 +16,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class RandomForestModel(object):
+    # TODO (mihail): Pass in config
     def __init__(self, model_cache_path: Optional[str] = None):
         if model_cache_path and os.path.exists(model_cache_path):
             LOGGER.info("Loading model from scratch...")

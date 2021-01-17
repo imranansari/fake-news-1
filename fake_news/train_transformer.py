@@ -11,6 +11,7 @@ from typing import Optional
 import mlflow
 import numpy as np
 import torch
+from pytorch_lightning.callbacks import ModelCheckpoint
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import f1_score
@@ -19,9 +20,7 @@ from sklearn.pipeline import FeatureUnion
 from torch.utils.data import DataLoader
 
 from fake_news.model.transformer_based import RobertaModel
-from fake_news.model.tree_based import RandomForestModel
 from fake_news.utils.dataloaders import FakeNewsTorchDataset
-from fake_news.utils.features import compute_bin_idx
 
 logging.basicConfig(
     format="%(levelname)s - %(asctime)s - %(filename)s - %(message)s",
@@ -34,27 +33,6 @@ def read_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config-file", type=str)
     return parser.parse_args()
-
-
-def extract_manual_features(datapoints: List[Dict], optimal_credit_bins_path: str) -> List[Dict]:
-    all_features = []
-    with open(optimal_credit_bins_path) as f:
-        optimal_credit_bins = json.load(f)
-    for datapoint in datapoints:
-        features = {}
-        features["speaker"] = datapoint["speaker"]
-        features["speaker_title"] = datapoint["speaker_title"]
-        features["state_info"] = datapoint["state_info"]
-        features["party_affiliation"] = datapoint["party_affiliation"]
-        # Compute credit score features
-        for feat in ["barely_true_count", "false_count", "half_true_count", "mostly_true_count", "pants_fire_count"]:
-            features[feat] = str(compute_bin_idx(datapoint[feat], optimal_credit_bins[feat]))
-        all_features.append(features)
-    return all_features
-
-
-def extract_statements(datapoints: List[Dict]) -> List[str]:
-    return [datapoint["statement"] for datapoint in datapoints]
 
 
 def set_random_seed() -> None:
@@ -75,17 +53,20 @@ def get_all_feature_names(feature_transform: FeatureUnion) -> List[str]:
 
 # TODO (mihail): Define types for datapoint
 
-def compute_metrics(model: RandomForestModel,
-                    input: np.array,
-                    expected_labels: List[bool],
+def compute_metrics(model: RobertaModel,
+                    dataloader: DataLoader,
                     split: Optional[str] = None) -> Dict:
-    predicted_proba = model.predict(input)
+    expected_labels = []
+    for batch in dataloader:
+        expected_labels.extend(batch["label"].cpu().numpy())
+    predicted_proba = model.predict(dataloader)
     predicted_labels = np.argmax(predicted_proba, axis=1)
     accuracy = accuracy_score(expected_labels, predicted_labels)
     f1 = f1_score(expected_labels, predicted_labels)
     auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
     conf_mat = confusion_matrix(expected_labels, predicted_labels)
     tn, fp, fn, tp = conf_mat.ravel()
+    print(f"Accuracy: {accuracy}, F1: {f1}, AUC: {auc}")
     split_prefix = "" if split is None else split
     return {
         f"{split_prefix} f1": f1,
@@ -122,9 +103,6 @@ if __name__ == "__main__":
         val_data_path = os.path.join(base_dir, config["val_data_path"])
         test_data_path = os.path.join(base_dir, config["test_data_path"])
         # Read data
-        # train_datapoints = read_json_data(train_data_path)
-        # val_datapoints = read_json_data(val_data_path)
-        # test_datapoints = read_json_data(test_data_path)
         train_data = FakeNewsTorchDataset(config, split="train")
         val_data = FakeNewsTorchDataset(config, split="val")
         test_data = FakeNewsTorchDataset(config, split="test")
@@ -138,20 +116,24 @@ if __name__ == "__main__":
                                     batch_size=16,
                                     pin_memory=True)
         
-        model = RobertaModel(config)
+        checkpoint_callback = ModelCheckpoint(monitor="val_loss",
+                                              mode="min",
+                                              dirpath=model_output_path,
+                                              filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
+        model = RobertaModel(config, model_output_path)
         model.train(train_dataloader, val_dataloader)
-        expected_labels = []
-        for batch in val_dataloader: 
-            expected_labels.extend(batch["label"].cpu().numpy())
-        print(expected_labels)
-        predicted_proba = model.predict(val_dataloader)
-        predicted_labels = np.argmax(predicted_proba, axis=1)
-        accuracy = accuracy_score(expected_labels, predicted_labels)
-        f1 = f1_score(expected_labels, predicted_labels)
-        auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
-        conf_mat = confusion_matrix(expected_labels, predicted_labels)
-        print(f"Accuracy: {accuracy}, F1: {f1}, AUC: {auc}")
- 
+        # expected_labels = []
+        # for batch in val_dataloader:
+        #     expected_labels.extend(batch["label"].cpu().numpy())
+        # print(expected_labels)
+        # predicted_proba = model.predict(val_dataloader)
+        # predicted_labels = np.argmax(predicted_proba, axis=1)
+        # accuracy = accuracy_score(expected_labels, predicted_labels)
+        # f1 = f1_score(expected_labels, predicted_labels)
+        # auc = roc_auc_score(expected_labels, predicted_proba[:, 1])
+        # conf_mat = confusion_matrix(expected_labels, predicted_labels)
+        # print(f"Accuracy: {accuracy}, F1: {f1}, AUC: {auc}")
+    
     with mlflow.start_run() as run:
         with open(os.path.join(model_output_path, "meta.json"), "w") as f:
             json.dump({"mlflow_run_id": run.info.run_id}, f)
@@ -168,6 +150,6 @@ if __name__ == "__main__":
             pass
         mlflow.log_params(model.get_params())
         LOGGER.info("Evaluating model...")
-        metrics = compute_metrics(model, val_features, val_labels, split="val")
+        metrics = compute_metrics(model, val_dataloader, split="val")
         LOGGER.info(f"Test metrics: {metrics}")
         mlflow.log_metrics(metrics)

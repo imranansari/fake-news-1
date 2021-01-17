@@ -1,10 +1,12 @@
 import os
 from typing import Dict
+from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 from transformers import RobertaForSequenceClassification
 
@@ -36,6 +38,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
+        self.log("train_loss", output[0])
         print(f"Train Loss: {output[0]}")
         return output[0]
     
@@ -44,7 +47,7 @@ class RobertaModule(pl.LightningModule):
                       attention_mask=batch["attention_mask"],
                       token_type_ids=batch["type_ids"],
                       labels=batch["label"])
-        # print(f"Val Loss: {output[0]}")
+        self.log("val_loss", output[0])
         return output[0]
     
     def test_step(self, batch, batch_idx):
@@ -61,14 +64,23 @@ class RobertaModule(pl.LightningModule):
 
 
 class RobertaModel(object):
-    def __init__(self, config: Dict):
+    # TODO (mihail): Make this optional
+    def __init__(self, config: Dict, model_cache_path: Optional[str] = None):
         self.config = config
         self.model = RobertaModule(config)
+        checkpoint_callback = ModelCheckpoint(monitor="val_loss",
+                                              mode="min",
+                                              dirpath=model_cache_path,
+                                              filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
+        
         self.trainer = Trainer(max_epochs=self.config["num_epochs"],
-                               gpus=1 if torch.cuda.is_available() else None)
+                               gpus=1 if torch.cuda.is_available() else None,
+                               callbacks=[checkpoint_callback])
     
-    def train(self, dataloader: DataLoader, val_dataloader):
-        self.trainer.fit(self.model, dataloader)  # val_dataloader)
+    def train(self, dataloader: DataLoader, val_dataloader: DataLoader):
+        self.trainer.fit(self.model,
+                         train_dataloader=dataloader,
+                         val_dataloaders=val_dataloader)
     
     def predict(self, dataloader: DataLoader):
         self.model.eval()
