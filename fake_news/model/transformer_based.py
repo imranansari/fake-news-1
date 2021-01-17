@@ -76,7 +76,7 @@ class RobertaModel(object):
     # TODO (mihail): Make this config optional
     def __init__(self, config: Dict, model_cache_path: Optional[str] = None, load_from_ckpt: bool = False):
         if load_from_ckpt:
-            self.model = RobertaModule.load_from_checkpoint(os.path.join(model_cache_path, "path"))
+            self.model = RobertaModule.load_from_checkpoint(os.path.join(model_cache_path, "roberta-model-epoch=epoch=1-val_loss=val_loss=0.6401.ckpt"), config=None)
         else:
             self.config = config
             self.model = RobertaModule(config)

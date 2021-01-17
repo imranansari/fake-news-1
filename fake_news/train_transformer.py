@@ -117,6 +117,11 @@ if __name__ == "__main__":
                                         shuffle=False,
                                         batch_size=16,
                                         pin_memory=True)
+            test_dataloader = DataLoader(test_data,
+                                        shuffle=False,
+                                        batch_size=16,
+                                        pin_memory=True)
+
             
             checkpoint_callback = ModelCheckpoint(monitor="val_loss",
                                                   mode="min",

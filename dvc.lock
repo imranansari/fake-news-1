@@ -70,3 +70,35 @@ train-random-forest:
     md5: ec91f888fb8577ac5f5b09480e8d395a.dir
     size: 50552390
     nfiles: 3
+train-roberta:
+  cmd: python fake_news/train_transformer.py --config-file config/roberta.json
+  deps:
+  - path: config/roberta.json
+    md5: 7c8b702d71477e40e00f7e464593ba56
+    size: 744
+  - path: data/processed/cleaned_test_data.json
+    md5: aab533912d8d90b3b0db2c0aae63d370
+    size: 1237984
+  - path: data/processed/cleaned_train_data.json
+    md5: c6b22922ea499ac5ca97c57602694c45
+    size: 9812841
+  - path: data/processed/cleaned_val_data.json
+    md5: 13fdb7e089cd6268ff91ede65dd226f0
+    size: 1232040
+  - path: fake_news/train_transformer.py
+    md5: 6802603e6e4a8da914dbec3e059d48e2
+    size: 6130
+  outs:
+  - path: data/processed/test_roberta_features.pkl
+    md5: ab8d4a8c8aa6d3649aba883a399a7713
+    size: 2860371
+  - path: data/processed/train_roberta_features.pkl
+    md5: d422725b82e869f42e6cee2a31acf594
+    size: 22888470
+  - path: data/processed/val_roberta_features.pkl
+    md5: 7b9c69177b9d37efe5da20a0a4c3a6bc
+    size: 2862600
+  - path: model_checkpoints/roberta
+    md5: 794d0f116cf1a32d8225643b32b6d4ba.dir
+    size: 1002561986
+    nfiles: 17
