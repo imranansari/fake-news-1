@@ -64,18 +64,21 @@ class RobertaModule(pl.LightningModule):
 
 
 class RobertaModel(object):
-    # TODO (mihail): Make this optional
-    def __init__(self, config: Dict, model_cache_path: Optional[str] = None):
-        self.config = config
-        self.model = RobertaModule(config)
-        checkpoint_callback = ModelCheckpoint(monitor="val_loss",
-                                              mode="min",
-                                              dirpath=model_cache_path,
-                                              filename="roberta-model-epoch={epoch}-val_loss={val_loss}")
-        
-        self.trainer = Trainer(max_epochs=self.config["num_epochs"],
-                               gpus=1 if torch.cuda.is_available() else None,
-                               callbacks=[checkpoint_callback])
+    # TODO (mihail): Make this config optional
+    def __init__(self, config: Dict, model_cache_path: Optional[str] = None, load_from_ckpt: bool = False):
+        if load_from_ckpt:
+            self.model = RobertaModule.load_from_checkpoint(os.path.join(model_cache_path, "path"))
+        else:
+            self.config = config
+            self.model = RobertaModule(config)
+            checkpoint_callback = ModelCheckpoint(monitor="val_loss",
+                                                  mode="min",
+                                                  dirpath=model_cache_path,
+                                                  filename="roberta-model-epoch={epoch}-val_loss={val_loss:.4f}")
+            
+            self.trainer = Trainer(max_epochs=self.config["num_epochs"],
+                                   gpus=1 if torch.cuda.is_available() else None,
+                                   callbacks=[checkpoint_callback])
     
     def train(self, dataloader: DataLoader, val_dataloader: DataLoader):
         self.trainer.fit(self.model,
